@@ -16,6 +16,8 @@ const DEFAULT_CONFIG_VERSION = 2.1
 const DEFAULT_TARGET_BRANCHES_REGEX = /^(release\/|develop$|main$|master$)/
 const DEFAULT_RUN_ONLY_CHANGED_ON_TARGET_BRANCHES = false
 
+type PackageManager = 'npm' | 'lerna';
+
 const listPackagesCommands = {
   lerna: {
     cmd: 'lerna',
@@ -32,7 +34,7 @@ const listPackagesSinceCommands = {
     cmd: 'npm',
     args: ['list', '--parseable', '--all', '--long']
   }),
-  lerna: (changesSinceCommit) => ({
+  lerna: (changesSinceCommit: string) => ({
     cmd: 'lerna',
     args: [
       'list',
@@ -61,10 +63,10 @@ interface CircletronConfig {
   runOnlyChangedOnTargetBranches: boolean
   targetBranchesRegex: RegExp
   passTargetBranch: boolean
-  packageManager: string
+  packageManager: PackageManager
 }
 
-async function getPackages(packageManager): Promise<Package[]> {
+async function getPackages(packageManager: PackageManager): Promise<Package[]> {
   const command = listPackagesCommands[packageManager];
   const packageOutput = await spawnGetStdout(command.cmd, command.args)
   const allPackages = await Promise.all(
@@ -243,6 +245,7 @@ export async function getCircletronConfig(): Promise<CircletronConfig> {
     targetBranches?: string
     runOnlyChangedOnTargetBranches?: boolean
     passTargetBranch?: boolean
+    packageManager?: string
   } = {}
   try {
     rawConfig = yamlParse((await pReadFile(pathJoin('.circleci', 'circletron.yml'))).toString())
@@ -257,7 +260,7 @@ export async function getCircletronConfig(): Promise<CircletronConfig> {
       ? new RegExp(rawConfig.targetBranches)
       : DEFAULT_TARGET_BRANCHES_REGEX,
     passTargetBranch: Boolean(rawConfig.passTargetBranch),
-    packageManager: rawConfig.packageManager ?? 'lerna',
+    packageManager: (rawConfig.packageManager ?? 'lerna') as PackageManager,
   }
 }
 
