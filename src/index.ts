@@ -16,6 +16,35 @@ const DEFAULT_CONFIG_VERSION = 2.1
 const DEFAULT_TARGET_BRANCHES_REGEX = /^(release\/|develop$|main$|master$)/
 const DEFAULT_RUN_ONLY_CHANGED_ON_TARGET_BRANCHES = false
 
+const listPackagesCommands = {
+  lerna: {
+    cmd: 'lerna',
+    args: ['list', '--parseable', '--all', '--long']
+  },
+  npm: {
+    cmd: 'npm',
+    args: ['list', '--parseable', '--all', '--long']
+  }
+}
+
+const listPackagesSinceCommands = {
+  npm: (changesSinceCommit) => ({
+    cmd: 'npm',
+    args: ['list', '--parseable', '--all', '--long']
+  }),
+  lerna: (changesSinceCommit) => ({
+    cmd: 'lerna',
+    args: [
+      'list',
+      '--parseable',
+      '--all',
+      '--long',
+      '--since',
+      changesSinceCommit
+    ]
+  })
+}
+
 const pReadFile = promisify(readFile)
 
 interface CircleConfig {
@@ -32,10 +61,12 @@ interface CircletronConfig {
   runOnlyChangedOnTargetBranches: boolean
   targetBranchesRegex: RegExp
   passTargetBranch: boolean
+  packageManager: string
 }
 
-async function getPackages(): Promise<Package[]> {
-  const packageOutput = await spawnGetStdout('lerna', ['list', '--parseable', '--all', '--long'])
+async function getPackages(packageManager): Promise<Package[]> {
+  const command = listPackagesCommands[packageManager];
+  const packageOutput = await spawnGetStdout(command.cmd, command.args)
   const allPackages = await Promise.all(
     packageOutput
       .trim()
@@ -100,15 +131,9 @@ const getTriggerPackages = async (
   }
 
   console.log("Looking for changes since `%s'", changesSinceCommit)
+  const command = listPackagesSinceCommands[config.packageManager](changesSinceCommit);
   const changeOutput = (
-    await spawnGetStdout('lerna', [
-      'list',
-      '--parseable',
-      '--all',
-      '--long',
-      '--since',
-      changesSinceCommit,
-    ])
+    await spawnGetStdout(command.cmd, command.args)
   ).trim()
 
   if (!changeOutput) {
@@ -232,12 +257,13 @@ export async function getCircletronConfig(): Promise<CircletronConfig> {
       ? new RegExp(rawConfig.targetBranches)
       : DEFAULT_TARGET_BRANCHES_REGEX,
     passTargetBranch: Boolean(rawConfig.passTargetBranch),
+    packageManager: rawConfig.packageManager ?? 'lerna',
   }
 }
 
 export async function triggerCiJobs(branch: string, continuationKey: string): Promise<void> {
   const circletronConfig = await getCircletronConfig()
-  const packages = await getPackages()
+  const packages = await getPackages(circletronConfig.packageManager)
   // run all jobs on target branches
   const isTargetBranch = circletronConfig.targetBranchesRegex.test(branch)
   const { triggerPackages, targetBranch } = await getTriggerPackages(
