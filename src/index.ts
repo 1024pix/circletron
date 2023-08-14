@@ -28,7 +28,7 @@ const listPackagesCommands = {
 }
 
 const listPackagesSinceCommands = {
-  npm: (changesSinceCommit) => ({
+  npm: () => ({
     cmd: 'npm',
     args: ['list', '--parseable', '--all', '--long']
   }),
