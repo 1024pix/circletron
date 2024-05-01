@@ -42,7 +42,7 @@
     "circletron": "./dist/index.js"
   },
   "devDependencies": {
-    "@types/jest": "26.0.23",
+    "@types/jest": "26.0.24",
     "@types/node": "15.12.4",
     "@typescript-eslint/eslint-plugin": "4.28.0",
     "@typescript-eslint/parser": "4.28.0",
@@ -50,7 +50,7 @@
     "eslint": "7.29.0",
     "eslint-config-prettier": "8.3.0",
     "husky": "6.0.0",
-    "jest": "27.0.5",
+    "jest": "27.5.1",
     "prettier": "2.3.1",
     "pretty-quick": "3.1.1",
     "rimraf": "3.0.2",
